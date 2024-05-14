@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Depends, HTTPException
-from typing import List
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -23,6 +22,7 @@ def get_db():
 def index():
     return {"Todo List Webapp Database by Brigitte - 2602119190"}
 
+# add new user
 @app.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_email(db, email=user.email)
@@ -30,43 +30,53 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db=db, user=user)
 
-@app.get("/users/{id}", response_model=schemas.User)
-def read_user(id: int, db: Session = Depends(get_db)):
-    db_user = crud.get_user(db, id=id)
+# return all users
+@app.get("/users/", response_model=list[schemas.User])
+def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    users = crud.get_users(db, skip=skip, limit=limit)
+    return users
+
+# get user by id
+@app.get("/users/{user_id}", response_model=schemas.User)
+def read_user(user_id: int, db: Session = Depends(get_db)):
+    db_user = crud.get_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-@app.get('/todos/all', response_model=List[schemas.TodoItem])
-def get_all_todos(db: Session = Depends(get_db)):
-    return crud.get_todo_items(db)
+# update user
+@app.put("/users/edit/{user_id}/", response_model=schemas.User)
+def edit_user(
+    user_id: int, user: schemas.UserUpdate, db: Session = Depends(get_db)
+):
+    return crud.update_user(db=db, payload=user, user_id=user_id)
 
-@app.get('/todos/get/{id}', response_model=schemas.TodoItem)
-def get_todo(id: UUID, db: Session = Depends(get_db)):
-    todo = crud.get_todo_item(db, id)
-    if todo is None:
-        raise HTTPException(status_code=404, detail="Task does not exist!")
-    return todo
+# delete user
+@app.delete("/users/delete/{user_id}/")
+def remove_user(user_id: int, db: Session = Depends(get_db)):
+    return crud.delete_user(db=db, user_id=user_id)
 
-@app.post('/todos', response_model=schemas.TodoItem)
-def post_todo(todo: schemas.TodoItemCreate, db: Session = Depends(get_db)):
-    return crud.create_todo_item(db, todo)
+# create todo
+@app.post("/users/{user_id}/todos/", response_model=schemas.Todo)
+def create_todo_for_user(
+    user_id: int, todo: schemas.TodoCreate, db: Session = Depends(get_db)
+):
+    return crud.create_user_todo(db=db, todo=todo, user_id=user_id)
 
-@app.put("/todos/edit/{id}", response_model=schemas.TodoItem)
-async def update_todo(id: UUID, todo: schemas.TodoItemUpdate, db: Session = Depends(get_db)):
-    updated_todo = crud.update_todo_item(db, id, todo)
-    if updated_todo is None:
-        raise HTTPException(status_code=404, detail="ID does not exist!")
-    return updated_todo
+# get all todos
+@app.get("/todos/", response_model=list[schemas.Todo])
+def read_todos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    todos = crud.get_todos(db, skip=skip, limit=limit)
+    return todos
 
-@app.delete("/todos/delete/{id}", response_model=schemas.TodoItem)
-async def delete_todo(id: UUID, db: Session = Depends(get_db)):
-    deleted_todo = crud.delete_todo_item(db, id)
-    if deleted_todo is None:
-        raise HTTPException(status_code=404, detail="ID does not exist!")
-    return deleted_todo
+# get a specific todo using user id
+@app.put("/todos/edit/{todo_id}/", response_model=schemas.Todo)
+def edit_todo(
+    todo_id: int, todo: schemas.TodoUpdate, db: Session = Depends(get_db)
+):
+    return crud.update_todo(db=db, payload=todo, todo_id=todo_id)
 
-@app.delete("/todos/delete_all")
-def delete_all_todos(db: Session = Depends(get_db)):
-    crud.delete_all_todo_items(db)
-    return {"Msg": "Todo list cleared successfully!"}
+# delete a specific todo
+@app.delete("/todos/delete/{todo_id}/")
+def remove_todo(todo_id: int, db: Session = Depends(get_db)):
+    return crud.delete_todo(db=db, todo_id=todo_id)
