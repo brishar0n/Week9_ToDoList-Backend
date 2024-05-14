@@ -4,24 +4,27 @@ import schemas
 from schemas import TodoItem, TodoItemCreate, TodoItemUpdate
 from uuid import UUID
 
+# users 
 def create_user(db: Session, user: schemas.UserCreate):
-    db_user = models.User(username=user.username, email=user.email, password=user.password)
+    fake_hashed_password = user.password + "fakepassword"
+    db_user = models.User(email=user.email, hashed_password=fake_hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
 
-def get_user(db: Session, id: int):
-    return db.query(models.User).filter(models.User.id == id).first()
+def get_user(db: Session, user_id: int):
+    return db.query(models.User).filter(models.User.id == user_id).first()
 
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
-def get_todo_item(db: Session, todo_id: UUID):
-    return db.query(TodoItem).filter(TodoItem.id == todo_id).first()
+# todos
+def get_todo(db: Session, user_id: int, todo_id: int):
+    return db.query(models.Todo).filter(models.Todo.user_id == user_id, models.Todo.id == todo_id).first()
 
-def get_todo_items(db: Session):
-    return db.query(TodoItem).all()
+def get_todos(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Todo).offset(skip).limit(limit).all()
 
 def create_todo_item(db: Session, todo: TodoItemCreate):
     db_todo = models.Todo(**todo.dict(), id=id)
@@ -30,20 +33,18 @@ def create_todo_item(db: Session, todo: TodoItemCreate):
     db.refresh(db_todo)
     return db_todo
 
-def update_todo_item(db: Session, todo_id: UUID, todo_update: TodoItemUpdate):
-    db_todo = get_todo_item(db, todo_id)
-    if db_todo is None:
-        return None
-    for attr, value in todo_update.dict().items():
-        setattr(db_todo, attr, value)
+def update_todo_item(db: Session, payload: schemas.TodoUpdate, todo_id: int):
+    todo_query = db.query(models.Todo).filter(models.Todo.id==todo_id)
+    todo = todo_query.first()
+    update_todo = payload.dict(exclude_unset=True)
+    todo_query.filter(models.Todo.id==todo_id).update(update_todo, synchronize_session=False)
     db.commit()
-    db.refresh(db_todo)
-    return db_todo
+    db.refresh(todo)
+    return todo
 
-def delete_todo_item(db: Session, todo_id: UUID):
-    db_todo = get_todo_item(db, todo_id)
-    if db_todo is None:
-        return None
-    db.delete(db_todo)
+def delete_todo_item(db: Session, todo_id:int):
+    todo_query = db.query(models.Todo).filter(models.Todo.id==todo_id)
+    todo = todo_query.first()
+    todo_query.delete(synchronize_session=False)
     db.commit()
-    return db_todo
+    return {"status": "Todo task deleted successfully!"}
