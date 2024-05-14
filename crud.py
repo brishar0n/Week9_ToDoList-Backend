@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 import models
 import schemas
-from schemas import TodoItem, TodoItemCreate, TodoItemUpdate
+from schemas import Todo, TodoCreate, TodoUpdate
 from uuid import UUID
 
 # users 
@@ -26,7 +26,7 @@ def get_todo(db: Session, user_id: int, todo_id: int):
 def get_todos(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Todo).offset(skip).limit(limit).all()
 
-def create_todo_item(db: Session, todo: TodoItemCreate):
+def create_todo_item(db: Session, todo: TodoCreate):
     db_todo = models.Todo(**todo.dict(), id=id)
     db.add(db_todo)
     db.commit()
@@ -48,3 +48,4 @@ def delete_todo_item(db: Session, todo_id:int):
     todo_query.delete(synchronize_session=False)
     db.commit()
     return {"status": "Todo task deleted successfully!"}
+    
