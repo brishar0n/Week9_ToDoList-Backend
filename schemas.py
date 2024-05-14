@@ -2,38 +2,35 @@ from pydantic import BaseModel
 from uuid import UUID
 from typing import List, Optional
 
+# todos
+class TodoBase(BaseModel):
+    task: str
+
+class TodoCreate(TodoBase):
+    pass
+
+class Todo(TodoBase):
+    id: int
+    user_id: int
+
+    class Config:
+        orm_mode = True
+
+class TodoUpdate(BaseModel):
+    task: Optional[str] = None
+    completed: Optional[bool] = None
+    
+# user
 class UserBase(BaseModel):
     email: str
-    profileURL: str
+    username: str
 
 class UserCreate(UserBase):
     password: str
 
 class User(UserBase):
     id: int
-
-    class Config:
-        orm_mode = True
-
-class TodoItemBase(BaseModel):
-    task: str
-
-class TodoItemCreate(TodoItemBase):
-    pass
-
-class TodoItemUpdate(BaseModel):
-    task: Optional[str] = None
-    completed: Optional[bool] = None
-
-class TodoItem(TodoItemBase):
-    id: UUID
-    completed: bool
-
-    class Config:
-        orm_mode = True
-        
-class UserWithTodos(User):
-    todos: List[TodoItem] = []
+    todos: List[Todo] = []
 
     class Config:
         orm_mode = True
